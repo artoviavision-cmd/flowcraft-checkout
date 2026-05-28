@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowCraft - Checkout</title>
+  <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { color-scheme: dark; }
+    body {
+      background: #05080e; color: #e6efff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh; display: flex;
+      align-items: center; justify-content: center;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .logo {
+      width: 56px; height: 56px; border-radius: 16px;
+      background: linear-gradient(135deg, #3a7cf0 0%, #9878ff 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; box-shadow: 0 8px 28px rgba(75,140,245,0.30);
+    }
+    h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+    p  { font-size: 13px; color: #8fa8cb; }
+    .spinner {
+      width: 26px; height: 26px;
+      border: 3px solid rgba(75,140,245,0.18);
+      border-top-color: #4b8cf5; border-radius: 50%;
+      animation: spin .75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #success { display: none; flex-direction: column; align-items: center; gap: 14px; }
+    .check-ring {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: rgba(30,207,166,0.10); border: 2px solid rgba(30,207,166,0.28);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 36px rgba(30,207,166,0.16);
+    }
+    .check-ring svg { animation: draw 500ms ease 100ms both; stroke-dasharray: 40; stroke-dashoffset: 40; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    #success h1 { color: #1ecfa6; }
+    .close-btn {
+      margin-top: 4px; padding: 10px 28px;
+      background: rgba(30,207,166,0.10); border: 1px solid rgba(30,207,166,0.22);
+      border-radius: 10px; color: #1ecfa6; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background 160ms;
+    }
+    .close-btn:hover { background: rgba(30,207,166,0.18); }
+  </style>
+</head>
+<body>
+  <div class="wrap" id="loading">
+    <div class="logo">&#x26A1;</div>
+    <div class="spinner"></div>
+    <h1>FlowCraft</h1>
+    <p id="loadingMsg">Opening checkout...</p>
+  </div>
+  <div class="wrap" id="success">
+    <div class="check-ring">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+        <path d="M6 15l6 6 12-12" stroke="#1ecfa6" stroke-width="2.4"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h1>Payment Complete!</h1>
+    <p>FlowCraft Premium is now active.<br>You can close this tab.</p>
+    <button class="close-btn" onclick="window.close()">Close Tab</button>
+  </div>
+
+  <script>
+    /* FlowCraft hosted checkout page — this is the Paddle "Default Payment Link".
+       Paddle appends ?_ptxn=<transactionId> and Paddle.js auto-opens the overlay.
+       The client-side token below is a PUBLIC token (safe to expose). */
+    var PADDLE_CLIENT_TOKEN = 'test_227d663631fe70702d14b641779';
+    var PADDLE_SANDBOX      = true;
+
+    var loadingEl  = document.getElementById('loading');
+    var successEl  = document.getElementById('success');
+    var loadingMsg = document.getElementById('loadingMsg');
+
+    function showSuccess() {
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (successEl) successEl.style.display = 'flex';
+    }
+    function setMsg(text) { if (loadingMsg) loadingMsg.textContent = text; }
+
+    (function initPaddle() {
+      if (!window.Paddle) { setMsg('Could not load the payment library. Please refresh.'); return; }
+      if (PADDLE_SANDBOX) window.Paddle.Environment.set('sandbox');
+      window.Paddle.Initialize({
+        token: PADDLE_CLIENT_TOKEN,
+        eventCallback: function (evt) {
+          if (evt.name === 'checkout.completed') showSuccess();
+          else if (evt.name === 'checkout.loaded') setMsg('Complete your payment above...');
+          else if (evt.name === 'checkout.closed') setMsg('Checkout closed. You can close this tab.');
+        },
+      });
+      // Paddle.js auto-opens the checkout from the _ptxn query param.
+      var hasTxn = new URLSearchParams(window.location.search).get('_ptxn');
+      if (!hasTxn) setMsg('No transaction found. Please start checkout from the FlowCraft extension.');
+    })();
+  </script>
+</body>
+</html>
