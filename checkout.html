@@ -66,7 +66,7 @@
     </div>
     <h1>Payment Complete!</h1>
     <p>FlowCraft Premium is now active.<br>You can close this tab.</p>
-    <button class="close-btn" onclick="window.close()">Close Tab</button>
+    <button class="close-btn" onclick="closeSelf()">Close Tab</button>
   </div>
 
   <script>
@@ -75,6 +75,7 @@
        The client-side token below is a PUBLIC token (safe to expose). */
     var PADDLE_CLIENT_TOKEN = 'test_227d663631fe70702d14b641779';
     var PADDLE_SANDBOX      = true;
+    var FLOWCRAFT_EXT_ID    = 'kepmijehfhhdjmcmalkemgbapghdaamm';
 
     var loadingEl  = document.getElementById('loading');
     var successEl  = document.getElementById('success');
@@ -86,15 +87,33 @@
     }
     function setMsg(text) { if (loadingMsg) loadingMsg.textContent = text; }
 
+    // Ask the FlowCraft extension to close this tab (an external page can't
+    // close a tab the extension opened). Falls back to window.close().
+    function closeSelf() {
+      try {
+        if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage(FLOWCRAFT_EXT_ID, { type: 'FLOWCRAFT_CLOSE_CHECKOUT' });
+        }
+      } catch (e) { /* ignore */ }
+      try { window.close(); } catch (e) { /* ignore */ }
+    }
+
     (function initPaddle() {
       if (!window.Paddle) { setMsg('Could not load the payment library. Please refresh.'); return; }
       if (PADDLE_SANDBOX) window.Paddle.Environment.set('sandbox');
       window.Paddle.Initialize({
         token: PADDLE_CLIENT_TOKEN,
         eventCallback: function (evt) {
-          if (evt.name === 'checkout.completed') showSuccess();
-          else if (evt.name === 'checkout.loaded') setMsg('Complete your payment above...');
-          else if (evt.name === 'checkout.closed') setMsg('Checkout closed. You can close this tab.');
+          if (evt.name === 'checkout.completed') {
+            showSuccess();
+            // Give the user a moment to see the confirmation, then close.
+            setTimeout(closeSelf, 3000);
+          } else if (evt.name === 'checkout.loaded') {
+            setMsg('Complete your payment above...');
+          } else if (evt.name === 'checkout.closed') {
+            // User closed the Paddle overlay → close the whole tab too.
+            closeSelf();
+          }
         },
       });
       // Paddle.js auto-opens the checkout from the _ptxn query param.
