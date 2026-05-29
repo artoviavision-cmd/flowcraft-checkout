@@ -103,6 +103,9 @@
       if (PADDLE_SANDBOX) window.Paddle.Environment.set('sandbox');
       window.Paddle.Initialize({
         token: PADDLE_CLIENT_TOKEN,
+        // allowLogout:false hides the "change customer / edit email" option so
+        // the user can't swap the prefilled email (which must match their account).
+        checkout: { settings: { allowLogout: false } },
         eventCallback: function (evt) {
           if (evt.name === 'checkout.completed') {
             showSuccess();
